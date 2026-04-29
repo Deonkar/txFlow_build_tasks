@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
+import redis
 
 from db import get_connection
 from kafka_publisher import KafkaPublisher
@@ -40,6 +41,11 @@ def _get_publisher() -> KafkaPublisher:
     if _publisher is None:
         _publisher = KafkaPublisher(bootstrap_servers=_require_env("KAFKA_BOOTSTRAP_SERVERS"))
     return _publisher
+
+
+def _get_redis() -> "redis.Redis":
+    url = _require_env("REDIS_URL")
+    return redis.from_url(url, decode_responses=True)
 
 
 def _publish_and_mark_published(event_id: str, user_id: str, payload: dict) -> None:
@@ -167,4 +173,29 @@ def create_payment(request: PaymentRequest, background: BackgroundTasks) -> dict
     )
 
     return {"event_id": event.event_id, "status": "accepted", "message": "Payment event queued for processing"}
+
+
+@app.get("/analytics")
+def analytics() -> dict:
+    r = _get_redis()
+
+    total_payments = int(r.get("analytics:total_payments") or 0)
+    total_volume = float(r.get("analytics:total_volume") or 0.0)
+
+    by_currency: dict[str, int] = {}
+    for key in r.scan_iter("analytics:payments_by_currency:*"):
+        currency = key.split(":")[-1]
+        by_currency[currency] = int(r.get(key) or 0)
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM dead_letter_events")
+            dlq_count = int(cur.fetchone()[0])
+
+    return {
+        "total_payments": total_payments,
+        "total_volume": total_volume,
+        "by_currency": by_currency,
+        "dlq_count": dlq_count,
+    }
 
