@@ -25,9 +25,10 @@ class RetryConfig:
 
 
 class BaseConsumer:
-    def __init__(self, *, group_id: str, service: str) -> None:
+    def __init__(self, *, group_id: str, service: str, enable_dlq: bool = True) -> None:
         self.group_id = group_id
         self.service = service
+        self.enable_dlq = enable_dlq
 
         self.topic = _require_env("PAYMENTS_TOPIC")
         self.dlq_topic = _require_env("DLQ_TOPIC")
@@ -84,7 +85,8 @@ class BaseConsumer:
             event = json.loads(raw.decode("utf-8"))
         except Exception as e:
             log_json(service=self.service, level="error", event="message_json_decode_failed", error=str(e))
-            self._publish_to_dlq(original_event={"_raw": raw.decode("utf-8", errors="replace")}, error_message=str(e))
+            if self.enable_dlq:
+                self._publish_to_dlq(original_event={"_raw": raw.decode("utf-8", errors="replace")}, error_message=str(e))
             self._consumer.commit(message=msg, asynchronous=False)
             return
 
@@ -115,7 +117,8 @@ class BaseConsumer:
                         error=str(e),
                         attempt=attempt + 1,
                     )
-                    self._publish_to_dlq(original_event=event, error_message=str(e))
+                    if self.enable_dlq:
+                        self._publish_to_dlq(original_event=event, error_message=str(e))
                     self._consumer.commit(message=msg, asynchronous=False)
                     return
 
