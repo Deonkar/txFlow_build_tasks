@@ -214,3 +214,20 @@ services:
       MAX_RETRY_ATTEMPTS: ${MAX_RETRY_ATTEMPTS}
       RETRY_BASE_DELAY_MS: ${RETRY_BASE_DELAY_MS}
 
+  dlq-handler:
+    build:
+      context: ./consumers
+      dockerfile: dlq_handler/Dockerfile
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      DLQ_TOPIC: ${DLQ_TOPIC}
+      DATABASE_URL: ${DATABASE_URL}
+      PORT: 8001
+    ports:
+      - "8001:8001"
+
