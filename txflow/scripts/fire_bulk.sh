@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 
 N="${N:-20}"
 SLEEP_MS="${SLEEP_MS:-50}"

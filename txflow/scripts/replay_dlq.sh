@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 
 DLQ_URL="${DLQ_URL:-http://localhost:8001/dlq}"
-API_URL="${API_URL:-http://localhost:8000}"
+KAFKA_BROKER="${KAFKA_BROKER:-redpanda:9092}"
+PAYMENTS_TOPIC="${PAYMENTS_TOPIC:-payments.initiated}"
 
 echo "Fetching DLQ events from $DLQ_URL ..."
 
-python - <<PY
+tmpfile="$(mktemp)"
+trap 'rm -f "$tmpfile"' EXIT
+
+python - <<PY > "$tmpfile"
 import json, sys, urllib.request
 
 dlq_url = "${DLQ_URL}"
-api_url = "${API_URL}"
 
 with urllib.request.urlopen(dlq_url, timeout=10) as resp:
     data = json.loads(resp.read().decode("utf-8"))
@@ -19,23 +22,37 @@ if not data:
     print("No DLQ events to replay.")
     sys.exit(0)
 
-replayed = 0
 for row in data:
     original = row.get("original_payload") or {}
-    # Replaying via POST /payment is not production-safe; for learning only.
-    req = urllib.request.Request(
-        api_url + "/payment",
-        data=json.dumps(original).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as r:
-            r.read()
-        replayed += 1
-    except Exception as e:
-        print(f"Replay failed for event_id={row.get('event_id')}: {e}")
-
-print(f"Replayed {replayed} events.")
+    # Only replay well-formed payment events.
+    if not isinstance(original, dict):
+        continue
+    if not original.get("user_id") or not original.get("event_id"):
+        continue
+    print(json.dumps(original, ensure_ascii=False))
 PY
+
+if grep -q "^No DLQ events to replay" "$tmpfile"; then
+  cat "$tmpfile"
+  exit 0
+fi
+
+replayed=0
+while IFS= read -r line; do
+  if [[ -z "$line" ]]; then
+    continue
+  fi
+  user_id="$(python - <<PY
+import json
+print(json.loads('''$line''').get('user_id',''))
+PY
+)"
+  docker compose exec -T redpanda rpk topic produce "$PAYMENTS_TOPIC" \
+    -X brokers="$KAFKA_BROKER" \
+    -k "$user_id" \
+    -f '%v\n' <<<"$line" >/dev/null
+  replayed=$((replayed+1))
+done < "$tmpfile"
+
+echo "Replayed $replayed events to $PAYMENTS_TOPIC."
 

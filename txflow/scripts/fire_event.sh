@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 
 API_URL="${API_URL:-http://localhost:8000}"
 
