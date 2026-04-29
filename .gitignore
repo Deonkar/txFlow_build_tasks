@@ -1,0 +1,53 @@
+.env
+.env.*
+!.env.example
+
+# TxFlow local env (explicit)
+txflow/.env
+txflow/.env.*
+!txflow/.env.example
+
+# Secrets / credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*credentials*.json
+*secret*.json
+service-account*.json
+
+# Local databases / state
+*.sqlite
+*.sqlite3
+.postgres/
+.redis/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.vite/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Office / temp files
+~$*
+
+# Project docs (per request)
+*.md
+game_plan.docx
+

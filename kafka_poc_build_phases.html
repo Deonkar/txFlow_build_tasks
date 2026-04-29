@@ -1,0 +1,134 @@
+<style>
+.ph { border: 0.5px solid var(--color-border-tertiary); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 10px; }
+.ph-top { display: flex; align-items: flex-start; gap: 14px; }
+.ph-num { font-size: 22px; font-weight: 500; color: var(--color-text-tertiary); min-width: 28px; line-height: 1; padding-top: 2px; }
+.ph-body { flex: 1; }
+.ph-title { font-size: 14px; font-weight: 500; margin: 0 0 4px; }
+.ph-desc { font-size: 12px; color: var(--color-text-secondary); margin: 0 0 8px; line-height: 1.6; }
+.ph-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.tag { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+.tag-t { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+.tag-learn { background: #EEEDFE; color: #3C3489; }
+.tag-time { background: #EAF3DE; color: #27500A; }
+@media (prefers-color-scheme: dark) {
+  .tag-learn { background: #26215C; color: #CECBF6; }
+  .tag-time { background: #173404; color: #C0DD97; }
+}
+.ph-learn { font-size: 12px; color: var(--color-text-secondary); border-left: 2px solid var(--color-border-secondary); padding-left: 10px; margin-top: 6px; line-height: 1.6; }
+.ph-learn strong { color: var(--color-text-primary); font-weight: 500; }
+.btn { background: transparent; border: 0.5px solid var(--color-border-secondary); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; color: var(--color-text-secondary); }
+.btn:hover { background: var(--color-background-secondary); }
+</style>
+
+<div style="padding: 0.5rem 0">
+
+<div class="ph">
+  <div class="ph-top">
+    <div class="ph-num">1</div>
+    <div class="ph-body">
+      <div class="ph-title">Get Kafka running locally — nothing else</div>
+      <div class="ph-desc">Docker Compose with Redpanda (Kafka-compatible, single container, no Zookeeper headache). Open the web console, create the payments.initiated topic with 3 partitions, send a test message from the console, read it back. That's it.</div>
+      <div class="ph-tags">
+        <span class="tag tag-time">2–3 days</span>
+        <span class="tag tag-t">Docker Compose</span>
+        <span class="tag tag-t">Redpanda</span>
+        <span class="tag tag-t">Redpanda Console (UI)</span>
+      </div>
+      <div class="ph-learn"><strong>What you'll actually understand after this:</strong> what a topic is, what a partition is, why messages are ordered within a partition but not across them, what an offset is (the message number), and why Kafka retains messages even after they're read.</div>
+    </div>
+  </div>
+  <button class="btn" onclick="sendPrompt('Show me the Docker Compose file for Phase 1 — Redpanda + console')">show me the docker-compose ↗</button>
+</div>
+
+<div class="ph">
+  <div class="ph-top">
+    <div class="ph-num">2</div>
+    <div class="ph-body">
+      <div class="ph-title">FastAPI producer + Outbox pattern</div>
+      <div class="ph-desc">POST /payment endpoint. Validates payload. Before publishing to Kafka, writes the event to an outbox table in PostgreSQL first — then publishes. If the app crashes after the DB write but before Kafka publish, the event survives. This is the Outbox pattern and it's load-bearing.</div>
+      <div class="ph-tags">
+        <span class="tag tag-time">3–4 days</span>
+        <span class="tag tag-t">FastAPI</span>
+        <span class="tag tag-t">confluent-kafka-python</span>
+        <span class="tag tag-t">PostgreSQL outbox table</span>
+      </div>
+      <div class="ph-learn"><strong>What you'll understand:</strong> why you can't write to DB and Kafka atomically (dual-write problem), how the Outbox pattern solves it, what "at-least-once delivery" means and why that guarantee needs idempotency on the consumer side.</div>
+    </div>
+  </div>
+  <button class="btn" onclick="sendPrompt('Explain the dual-write problem and the Outbox pattern in detail')">explain outbox pattern ↗</button>
+</div>
+
+<div class="ph">
+  <div class="ph-top">
+    <div class="ph-num">3</div>
+    <div class="ph-body">
+      <div class="ph-title">First consumer — wallet updater + Redis dedup</div>
+      <div class="ph-desc">Write one Python consumer that reads payment events and updates a wallet balance in PostgreSQL. Before processing, check Redis: has this event_id been processed before? If yes, skip. If no, process and mark in Redis. Manual offset commit — only commit after successful processing, not before.</div>
+      <div class="ph-tags">
+        <span class="tag tag-time">3–4 days</span>
+        <span class="tag tag-t">aiokafka or confluent-kafka</span>
+        <span class="tag tag-t">Redis dedup</span>
+        <span class="tag tag-t">manual offset commit</span>
+      </div>
+      <div class="ph-learn"><strong>What you'll understand:</strong> consumer groups, offset management (the hardest concept in Kafka), idempotency as a design constraint (not just a safety net), and why committing offsets before vs after processing changes the at-least-once guarantee.</div>
+    </div>
+  </div>
+  <button class="btn" onclick="sendPrompt('Explain offset management and why manual commit matters in Kafka consumers')">explain offset commit ↗</button>
+</div>
+
+<div class="ph">
+  <div class="ph-top">
+    <div class="ph-num">4</div>
+    <div class="ph-body">
+      <div class="ph-title">Add the other 4 consumers</div>
+      <div class="ph-desc">Fraud scorer (if amount > threshold, flag it). Notifier (print "email sent for user X"). Audit logger (write immutable record — never update, never delete, just append). Analytics (increment payment counters in Redis). Each is its own consumer group, each reads independently.</div>
+      <div class="ph-tags">
+        <span class="tag tag-time">3–5 days</span>
+        <span class="tag tag-t">4 independent Python services</span>
+        <span class="tag tag-t">4 consumer groups</span>
+      </div>
+      <div class="ph-learn"><strong>What you'll understand:</strong> this is the core Kafka lesson — one event, 5 independent readers, zero coupling. Kill the notifier service for an hour, restart it, and it replays from where it left off. That's not possible with SQS. That's Kafka's fundamental shift.</div>
+    </div>
+  </div>
+</div>
+
+<div class="ph">
+  <div class="ph-top">
+    <div class="ph-num">5</div>
+    <div class="ph-body">
+      <div class="ph-title">Retries + Dead Letter Queue</div>
+      <div class="ph-desc">Add retry logic to each consumer (3 attempts with exponential backoff). If all 3 fail, publish the event to payments.dlq with error metadata attached. Write a DLQ consumer that logs failed events and shows why they failed.</div>
+      <div class="ph-tags">
+        <span class="tag tag-time">2–3 days</span>
+        <span class="tag tag-t">exponential backoff</span>
+        <span class="tag tag-t">payments.dlq topic</span>
+        <span class="tag tag-t">error envelope pattern</span>
+      </div>
+      <div class="ph-learn"><strong>What you'll understand:</strong> why you can't just let consumers throw exceptions (it blocks the partition), how DLQ isolates bad events from good ones, and what "poison pill" events are — messages that will never succeed and need to be quarantined.</div>
+    </div>
+  </div>
+  <button class="btn" onclick="sendPrompt('Explain what a poison pill message is in Kafka and why DLQs are necessary')">explain poison pills ↗</button>
+</div>
+
+<div class="ph">
+  <div class="ph-top">
+    <div class="ph-num">6</div>
+    <div class="ph-body">
+      <div class="ph-title">Observability dashboard</div>
+      <div class="ph-desc">Simple React UI showing: consumer lag per group (how many messages behind is each consumer?), DLQ event count, payment throughput over time. Pulls data from the Redpanda Admin API. Consumer lag is Kafka's equivalent of your Sidekiq queue depth — the most important health signal.</div>
+      <div class="ph-tags">
+        <span class="tag tag-time">3–4 days</span>
+        <span class="tag tag-t">React + TypeScript</span>
+        <span class="tag tag-t">Redpanda Admin API</span>
+        <span class="tag tag-t">consumer lag metric</span>
+      </div>
+      <div class="ph-learn"><strong>What you'll understand:</strong> consumer lag as a health signal (rising lag = consumer falling behind = problem), how Kafka exposes operational data, and why this dashboard is what separates "I ran Kafka" from "I ran Kafka in production."</div>
+    </div>
+  </div>
+</div>
+
+<div style="padding: 12px 14px; border-radius: 10px; background: var(--color-background-secondary); font-size: 12px; color: var(--color-text-secondary); line-height: 1.7;">
+  <span style="font-weight: 500; color: var(--color-text-primary);">Total POC time:</span> ~3 weeks at a few hours/day. Phase 1–3 is the most important — that's where the concepts land. Phase 4–6 is where you build the interview story.
+</div>
+
+</div>
