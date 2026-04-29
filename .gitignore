@@ -54,4 +54,5 @@ game_plan.docx
 # Allow README files (repo onboarding)
 !README.md
 !txflow/README.md
+!TxFlow_Explained.md
 
