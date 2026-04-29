@@ -231,3 +231,22 @@ services:
     ports:
       - "8001:8001"
 
+  dashboard:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    depends_on:
+      producer:
+        condition: service_started
+      dlq-handler:
+        condition: service_started
+      redpanda:
+        condition: service_healthy
+    environment:
+      PRODUCER_API_URL: http://producer:8000
+      DLQ_HANDLER_API_URL: http://dlq-handler:8001
+      REDPANDA_ADMIN_URL: http://redpanda:9644
+      PAYMENTS_TOPIC: payments.initiated
+    ports:
+      - "3000:3000"
+
