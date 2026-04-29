@@ -51,3 +51,7 @@ Thumbs.db
 *.md
 game_plan.docx
 
+# Allow README files (repo onboarding)
+!README.md
+!txflow/README.md
+
